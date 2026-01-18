@@ -1,0 +1,38 @@
+# Robots.txt for BlogPlatform
+# https://www.robotstxt.org/
+
+# Allow all robots
+User-agent: *
+Allow: /
+
+# Disallow admin and dashboard pages
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /dashboard
+Disallow: /dashboard/*
+
+# Disallow auth pages
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Disallow API routes
+Disallow: /api/
+
+# Disallow private user pages
+Disallow: /settings
+Disallow: /bookmarks
+
+# Allow search engine crawlers to index public content faster
+User-agent: Googlebot
+Crawl-delay: 1
+
+User-agent: Bingbot
+Crawl-delay: 2
+
+User-agent: Slurp
+Crawl-delay: 2
+
+# Sitemap location
+Sitemap: https://your-domain.com/sitemap.xml

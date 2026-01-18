@@ -1,0 +1,360 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  READER
+  AUTHOR
+  EDITOR
+  ADMIN
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum SubscriptionTier {
+  FREE
+  PAID
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String
+  bio           String?   @db.Text
+  avatar        String?
+  role          Role      @default(READER)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  posts         Post[]
+  comments      Comment[]
+  subscription  Subscription?
+  likes         Like[]
+  bookmarks     Bookmark[]
+  sessions      Session[]
+  accounts      Account[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// NextAuth Account (OAuth providers)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// NextAuth Session
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// NextAuth Verification Token
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Password Reset Token
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+model Post {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  subtitle    String?
+  content     Json       // Tiptap JSON document
+  contentHtml String     @db.Text // Pre-rendered HTML
+  excerpt     String?    @db.Text
+  coverImage  String?
+  status      PostStatus @default(DRAFT)
+  isPremium   Boolean    @default(false)
+  publishedAt DateTime?
+  scheduledFor DateTime?
+  readingTime Int?       // Minutes
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // SEO fields
+  metaTitle       String?
+  metaDescription String? @db.Text
+  canonicalUrl    String?
+
+  // Relations
+  author     User       @relation(fields: [authorId], references: [id])
+  authorId   String
+  categories Category[] @relation("PostCategories")
+  tags       Tag[]      @relation("PostTags")
+  comments   Comment[]
+  likes      Like[]
+  bookmarks  Bookmark[]
+  views      PostView[]
+
+  @@index([authorId])
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([slug])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  color       String? // Hex color for UI badges
+
+  posts Post[] @relation("PostCategories")
+
+  @@index([slug])
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  posts Post[] @relation("PostTags")
+
+  @@index([slug])
+}
+
+// ============================================
+// ENGAGEMENT
+// ============================================
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isEdited  Boolean  @default(false)
+
+  // Relations
+  author   User    @relation(fields: [authorId], references: [id])
+  authorId String
+  post     Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId   String
+
+  // Nested comments (2 levels max)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId String?
+  replies  Comment[] @relation("CommentReplies")
+
+  likes CommentLike[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId String
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+
+  @@unique([userId, postId])
+  @@index([userId])
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model PostView {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Analytics data (privacy-conscious)
+  ipHash    String?  // Hashed IP for uniqueness, not tracking
+  userAgent String?  @db.Text
+  referer   String?
+  country   String?
+
+  post   Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+  userId String? // Null for anonymous views
+
+  @@index([postId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ============================================
+// SUBSCRIPTIONS
+// ============================================
+
+model Subscription {
+  id        String           @id @default(cuid())
+  tier      SubscriptionTier @default(FREE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Stripe data
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+// ============================================
+// NEWSLETTER
+// ============================================
+
+model Newsletter {
+  id          String    @id @default(cuid())
+  subject     String
+  content     Json      // Tiptap JSON
+  contentHtml String    @db.Text
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Stats (updated after send)
+  recipientCount Int @default(0)
+  openCount      Int @default(0)
+  clickCount     Int @default(0)
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model NewsletterSubscriber {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  isVerified    Boolean   @default(false)
+  verifyToken   String?   @unique
+  unsubscribeToken String @unique @default(cuid())
+  createdAt     DateTime  @default(now())
+
+  // Link to user if they have an account
+  userId String?
+
+  @@index([email])
+  @@index([verifyToken])
+}
+
+// ============================================
+// SITE SETTINGS
+// ============================================
+
+model SiteSettings {
+  id              String  @id @default("default")
+  siteName        String  @default("BlogPlatform")
+  siteDescription String? @db.Text
+  logo            String?
+  favicon         String?
+
+  // Branding colors
+  primaryColor String @default("#6366f1")
+  accentColor  String @default("#8b5cf6")
+
+  // Social links
+  twitterHandle String?
+  facebookUrl   String?
+  instagramUrl  String?
+  linkedinUrl   String?
+
+  // Subscription pricing (in cents)
+  monthlyPrice Int @default(500)
+  yearlyPrice  Int @default(5000)
+
+  // Feature flags
+  commentsEnabled Boolean @default(true)
+  likesEnabled    Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
