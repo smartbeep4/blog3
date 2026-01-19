@@ -42,6 +42,7 @@ model User {
   name          String
   bio           String?   @db.Text
   avatar        String?
+  image         String?   // Required by NextAuth PrismaAdapter for OAuth profile pictures
   role          Role      @default(READER)
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
