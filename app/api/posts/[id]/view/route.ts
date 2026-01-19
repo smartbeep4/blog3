@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import crypto from "crypto"
 
+// Force Node.js runtime since we use the crypto module
+export const runtime = "nodejs"
+
 interface RouteParams {
   params: Promise<{ id: string }>
 }
