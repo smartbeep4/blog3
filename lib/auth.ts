@@ -7,6 +7,7 @@ import { compare } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import type { Role } from "@prisma/client"
 import type { Provider } from "next-auth/providers"
+import { authConfig } from "./auth.config"
 
 // Extend NextAuth types
 declare module "next-auth" {
@@ -33,7 +34,7 @@ declare module "@auth/core/jwt" {
   }
 }
 
-// Build providers array dynamically based on env vars
+// Build providers array with full authorize callback (server-side only)
 function getProviders(): Provider[] {
   const providers: Provider[] = [
     Credentials({
@@ -99,16 +100,9 @@ function getProviders(): Provider[] {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma) as any,
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
   providers: getProviders(),
   callbacks: {
     async jwt({ token, user, trigger, session }) {

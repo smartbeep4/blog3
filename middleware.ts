@@ -1,19 +1,6 @@
-import { auth } from "@/lib/auth"
+import NextAuth from "next-auth"
+import { authConfig } from "@/lib/auth.config"
 import { NextResponse } from "next/server"
-
-// Routes that require authentication
-const protectedRoutes = ["/dashboard", "/admin", "/settings", "/bookmarks"]
-
-// Routes that require admin role
-const adminRoutes = ["/admin"]
-
-// Routes that are only accessible when NOT authenticated
-const authRoutes = [
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-]
 
 // Security headers to add to all responses
 const securityHeaders = {
@@ -34,20 +21,11 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response
 }
 
+// Create edge-compatible auth instance
+const { auth } = NextAuth(authConfig)
+
 export default auth((req) => {
   const { nextUrl } = req
-  const isLoggedIn = !!req.auth
-  const userRole = req.auth?.user?.role
-
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    nextUrl.pathname.startsWith(route)
-  )
-  const isAdminRoute = adminRoutes.some((route) =>
-    nextUrl.pathname.startsWith(route)
-  )
-  const isAuthRoute = authRoutes.some((route) =>
-    nextUrl.pathname.startsWith(route)
-  )
   const isApiRoute = nextUrl.pathname.startsWith("/api")
 
   // Allow API routes to handle their own auth but still add security headers
@@ -56,35 +34,8 @@ export default auth((req) => {
     return addSecurityHeaders(response)
   }
 
-  // Redirect logged-in users away from auth pages
-  if (isAuthRoute && isLoggedIn) {
-    const response = NextResponse.redirect(new URL("/dashboard", nextUrl))
-    return addSecurityHeaders(response)
-  }
-
-  // Redirect non-logged-in users to login for protected routes
-  if (isProtectedRoute && !isLoggedIn) {
-    const loginUrl = new URL("/login", nextUrl)
-    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname)
-    const response = NextResponse.redirect(loginUrl)
-    return addSecurityHeaders(response)
-  }
-
-  // Check admin routes
-  if (isAdminRoute && userRole !== "ADMIN") {
-    // If logged in but not admin, redirect to dashboard
-    if (isLoggedIn) {
-      const response = NextResponse.redirect(new URL("/dashboard", nextUrl))
-      return addSecurityHeaders(response)
-    }
-    // If not logged in, redirect to login
-    const loginUrl = new URL("/login", nextUrl)
-    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname)
-    const response = NextResponse.redirect(loginUrl)
-    return addSecurityHeaders(response)
-  }
-
-  // Add security headers to all responses
+  // Auth redirects are handled by the authorized callback in auth.config.ts
+  // Just add security headers to all responses
   const response = NextResponse.next()
   return addSecurityHeaders(response)
 })
