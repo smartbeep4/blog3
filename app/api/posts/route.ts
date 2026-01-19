@@ -122,15 +122,16 @@ async function generateUniqueSlug(
 }
 
 // Query params schema for GET
+// Note: Using .nullish() for optional fields because searchParams.get() returns null for missing params
 const listQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(10),
-  status: z.nativeEnum(PostStatus).optional(),
-  authorId: z.string().optional(),
-  categoryId: z.string().optional(),
-  search: z.string().optional(),
-  sortBy: z.enum(["createdAt", "publishedAt", "title"]).default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  status: z.nativeEnum(PostStatus).nullish(),
+  authorId: z.string().nullish(),
+  categoryId: z.string().nullish(),
+  search: z.string().nullish(),
+  sortBy: z.enum(["createdAt", "publishedAt", "title"]).nullish().default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).nullish().default("desc"),
 })
 
 // Create post schema
