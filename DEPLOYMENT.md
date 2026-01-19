@@ -7,14 +7,15 @@ This comprehensive guide covers deploying the BlogPlatform to production using R
 1. [Prerequisites](#prerequisites)
 2. [Local Development Setup](#local-development-setup)
 3. [Render.com Deployment](#rendercom-deployment)
-4. [Environment Variables Reference](#environment-variables-reference)
-5. [Stripe Webhook Setup](#stripe-webhook-setup)
-6. [Custom Domain Configuration](#custom-domain-configuration)
-7. [Database Management](#database-management)
-8. [Monitoring and Maintenance](#monitoring-and-maintenance)
-9. [Troubleshooting](#troubleshooting)
-10. [Cost Breakdown](#cost-breakdown)
-11. [Scaling and Upgrades](#scaling-and-upgrades)
+4. [Initial Admin Account Setup](#initial-admin-account-setup)
+5. [Environment Variables Reference](#environment-variables-reference)
+6. [Stripe Webhook Setup](#stripe-webhook-setup)
+7. [Custom Domain Configuration](#custom-domain-configuration)
+8. [Database Management](#database-management)
+9. [Monitoring and Maintenance](#monitoring-and-maintenance)
+10. [Troubleshooting](#troubleshooting)
+11. [Cost Breakdown](#cost-breakdown)
+12. [Scaling and Upgrades](#scaling-and-upgrades)
 
 ---
 
@@ -245,6 +246,118 @@ After deployment, verify:
 
 ---
 
+## Initial Admin Account Setup
+
+Render's free tier does not provide shell access, so you cannot run `npm run db:seed` to create initial users. Instead, use the protected `/api/admin/setup` endpoint to create your first admin account.
+
+### 1. Generate a Secure Setup Key
+
+Use one of these methods to generate a cryptographically secure key (minimum 32 characters):
+
+```bash
+# Option 1: Using OpenSSL
+openssl rand -base64 32
+
+# Option 2: Using Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+
+# Option 3: Using Python
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+This will output something like: `K7xZp9qR2vN5mL1wT8yU3oI6aE0dC4fH9jB2kP5sX7n=`
+
+**Important**: Store this key securely in a password manager. You will need it to create admin accounts.
+
+### 2. Add the Key to Render
+
+1. Go to your Render Dashboard
+2. Select your web service
+3. Navigate to **Environment** tab
+4. Add a new environment variable:
+   - **Key**: `ADMIN_SETUP_KEY`
+   - **Value**: Your generated key from step 1
+5. Click **Save Changes**
+6. Redeploy the service for changes to take effect
+
+### 3. Create Your Admin Account
+
+After the service redeploys, create your admin account by calling the setup endpoint:
+
+```bash
+curl -X POST https://your-app.onrender.com/api/admin/setup \
+  -H "Authorization: Bearer YOUR_SETUP_KEY_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "your-email@example.com",
+    "password": "YourSecureP@ssword123",
+    "name": "Your Name"
+  }'
+```
+
+**Password Requirements**:
+- Minimum 12 characters
+- At least one uppercase letter (A-Z)
+- At least one lowercase letter (a-z)
+- At least one number (0-9)
+- At least one special character (!@#$%^&* etc.)
+
+### 4. Successful Response
+
+On success, you will receive:
+
+```json
+{
+  "message": "Admin user created successfully",
+  "created": true,
+  "user": {
+    "id": "clxx...",
+    "email": "your-email@example.com",
+    "name": "Your Name",
+    "role": "ADMIN"
+  }
+}
+```
+
+The admin account is created with:
+- **Role**: ADMIN (full platform access)
+- **Subscription**: PAID tier
+- **Email**: Pre-verified (no verification email needed)
+
+### Security Features
+
+The setup endpoint includes several security measures:
+
+| Feature | Description |
+|---------|-------------|
+| **Timing-safe comparison** | Prevents timing attacks on the setup key |
+| **Idempotent** | Calling with same email won't create duplicates |
+| **Strong password validation** | Enforces complexity requirements |
+| **Failed attempt logging** | Logs unauthorized access attempts |
+| **Minimum key length** | Rejects keys shorter than 32 characters |
+
+### Troubleshooting
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| 503 - Setup endpoint not configured | ADMIN_SETUP_KEY not set or too short | Add key to environment variables and redeploy |
+| 401 - Unauthorized | Wrong or missing setup key | Check Authorization header format: `Bearer <key>` |
+| 400 - Validation error | Password doesn't meet requirements | Use a stronger password |
+| 409 - User already exists | Email is taken by non-admin user | Use a different email address |
+
+### Alternative: Local Seeding
+
+If you have access to the production database URL, you can seed from your local machine:
+
+```bash
+# Set production DATABASE_URL temporarily
+DATABASE_URL="postgresql://user:pass@host:5432/db?sslmode=require" npm run db:seed
+```
+
+**Warning**: The seed script deletes existing data in non-production environments. In production (`NODE_ENV=production`), it skips the cleanup step but may still fail if data already exists.
+
+---
+
 ## Environment Variables Reference
 
 ### Required Variables
@@ -289,6 +402,12 @@ After deployment, verify:
 | GOOGLE_CLIENT_SECRET | Google OAuth client secret |
 | GITHUB_CLIENT_ID | GitHub OAuth client ID |
 | GITHUB_CLIENT_SECRET | GitHub OAuth client secret |
+
+### Admin Setup
+
+| Variable | Description | How to Generate |
+|----------|-------------|-----------------|
+| ADMIN_SETUP_KEY | Secret key for creating admin users via API (min 32 chars) | `openssl rand -base64 32` |
 
 ### Application Settings
 
