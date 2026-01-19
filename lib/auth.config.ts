@@ -4,6 +4,10 @@ import Google from "next-auth/providers/google"
 import GitHub from "next-auth/providers/github"
 import type { Provider } from "next-auth/providers"
 
+// Local Role type matching Prisma enum for Edge compatibility
+// (Cannot import from @prisma/client in Edge runtime)
+type Role = "READER" | "AUTHOR" | "EDITOR" | "ADMIN"
+
 // Build providers array dynamically based on env vars
 // Note: Credentials provider authorize callback is handled in auth.ts (server-side only)
 function getProviders(): Provider[] {
@@ -67,7 +71,7 @@ export const authConfig: NextAuthConfig = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string
-        session.user.role = token.role
+        session.user.role = token.role as Role
       }
       return session
     },
