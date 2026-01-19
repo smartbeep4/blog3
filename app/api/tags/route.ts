@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+// Note: Using .nullish() because searchParams.get() returns null for missing params
 const querySchema = z.object({
-  search: z.string().optional(),
-  limit: z.coerce.number().min(1).max(100).default(50),
+  search: z.string().nullish(),
+  limit: z
+    .union([z.coerce.number().min(1).max(100), z.null()])
+    .transform((val) => val ?? 50),
 })
 
 // GET /api/tags - List tags with optional search
