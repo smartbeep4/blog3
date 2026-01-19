@@ -82,7 +82,8 @@
     "tailwind-merge": "^3.4.0",
     "use-debounce": "^10.1.0",
     "zod": "^4.3.5",
-    "zustand": "^5.0.10"
+    "zustand": "^5.0.10",
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -91,7 +92,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "bcryptjs": "^3.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.1.3",
     "eslint-config-prettier": "^10.1.8",
