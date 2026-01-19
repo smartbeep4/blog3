@@ -56,6 +56,11 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
 
+      # Admin setup key (for initial admin creation without shell access)
+      # Generate with: openssl rand -base64 32
+      - key: ADMIN_SETUP_KEY
+        sync: false
+
       # OAuth providers (optional)
       - key: GOOGLE_CLIENT_ID
         sync: false
