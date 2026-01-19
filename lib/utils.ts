@@ -33,6 +33,19 @@ export function truncate(text: string, length: number): string {
   return text.slice(0, length).trim() + "...";
 }
 
+export function getBaseUrl(): string {
+  const url = process.env.NEXT_PUBLIC_APP_URL;
+  if (!url) {
+    return "http://localhost:3000";
+  }
+  // If the URL already has a scheme, use it as-is
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  // Otherwise, prepend https:// (assume production)
+  return `https://${url}`;
+}
+
 export function absoluteUrl(path: string): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL}${path}`;
+  return `${getBaseUrl()}${path}`;
 }
