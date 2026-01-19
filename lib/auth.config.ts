@@ -49,6 +49,7 @@ function getProviders(): Provider[] {
 // Edge-compatible auth configuration (no Prisma, no Node.js-specific modules)
 // This config is used by middleware which runs on Edge runtime
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
