@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -42,11 +42,27 @@ interface RegisterFormProps {
 
 export function RegisterForm({ callbackUrl }: RegisterFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isOAuthLoading, setIsOAuthLoading] = useState<string | null>(null)
 
   const redirectTo = callbackUrl || "/dashboard"
+
+  // Check for error from NextAuth OAuth flow
+  const authError = searchParams.get("error")
+  const oauthErrorMessage =
+    authError === "OAuthAccountNotLinked"
+      ? "This email is already associated with another account. Please sign in with the original method."
+      : authError === "OAuthCallback"
+        ? "There was an error signing up with the provider. Please try again."
+        : authError === "Configuration"
+          ? "OAuth provider is not configured correctly. Please contact the site administrator."
+          : authError === "AccessDenied"
+            ? "Access was denied. You may have cancelled the sign-up or lack permission."
+            : authError
+              ? "An error occurred during sign up. Please try again."
+              : null
 
   const {
     register,
@@ -125,10 +141,10 @@ export function RegisterForm({ callbackUrl }: RegisterFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {error && (
+      {(error || oauthErrorMessage) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || oauthErrorMessage}</AlertDescription>
         </Alert>
       )}
 

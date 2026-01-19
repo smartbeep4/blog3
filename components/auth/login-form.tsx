@@ -42,7 +42,13 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       ? "This email is already associated with another account. Please sign in with the original method."
       : authError === "OAuthCallback"
         ? "There was an error signing in with the provider. Please try again."
-        : null
+        : authError === "Configuration"
+          ? "OAuth provider is not configured correctly. Please contact the site administrator."
+          : authError === "AccessDenied"
+            ? "Access was denied. You may have cancelled the sign-in or lack permission."
+            : authError
+              ? "An error occurred during sign in. Please try again."
+              : null
 
   const {
     register,
