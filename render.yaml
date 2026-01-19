@@ -15,12 +15,10 @@ services:
       - key: NODE_ENV
         value: production
 
-      # Next.js configuration
+      # Next.js configuration (set manually in dashboard after first deploy)
+      # Format: https://your-app-name.onrender.com
       - key: NEXTAUTH_URL
-        fromService:
-          name: blog-platform
-          type: web
-          property: host
+        sync: false
 
       # Database connection (auto-linked from Render PostgreSQL)
       - key: DATABASE_URL
@@ -68,12 +66,10 @@ services:
       - key: GITHUB_CLIENT_SECRET
         sync: false
 
-      # App configuration
+      # App configuration (set manually in dashboard after first deploy)
+      # Format: https://your-app-name.onrender.com
       - key: NEXT_PUBLIC_APP_URL
-        fromService:
-          name: blog-platform
-          type: web
-          property: host
+        sync: false
       - key: NEXT_PUBLIC_APP_NAME
         value: BlogPlatform
 

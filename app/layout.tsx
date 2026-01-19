@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthSessionProvider } from "@/components/providers/session-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { getBaseUrl } from "@/lib/utils"
 import "./globals.css"
 
 const inter = Inter({
@@ -22,9 +23,7 @@ export const metadata: Metadata = {
     template: "%s | BlogPlatform",
   },
   description: "A modern blogging platform for writers and readers",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  ),
+  metadataBase: new URL(getBaseUrl()),
 }
 
 export default function RootLayout({
